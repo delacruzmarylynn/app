@@ -1,8 +1,3 @@
-
-# Sequence Diagram (Entry Point: `main`) – with Threads
-
-> Mermaid sequence diagram that traces the runtime flow starting at `main()` and includes the major threads spawned by the app.
-
 ```mermaid
 sequenceDiagram
     autonumber
@@ -29,7 +24,8 @@ sequenceDiagram
     Main->>Host: Host(fd, port)
     Main->>ServerT: pthread_create(server_entry, &Host)
     ServerT->>Host: accept_clients()
-    note over Host,ServerT: accept() loop; for each inbound connection
+    note over Host,ServerT: accept() loop
+    note over Host,ServerT: for each inbound connection
     Host-->>Host: pthread_create(handle_client_entry) per client (detached)
 
     Main->>TickT: pthread_create(tick_entry, &app)
@@ -41,7 +37,7 @@ sequenceDiagram
             DM->>Resolver: resolve(job.file_key)
             Resolver->>App: list_unique_files(peers, my_port)
             App->>Peer: for each peer: Client(peer_port).send_choice(1)
-            Peer-->>App: file list (name\tsize...)
+            Peer-->>App: file list (name\\tsize...)
             Resolver->>App: find_by_key(files, file_key)
             Resolver->>Probe: probe(network_file, verify_file=true)
             Probe->>Peer: for each candidate seeder: Client(seeder.port).send_choice(3)
@@ -85,17 +81,21 @@ sequenceDiagram
                 Worker->>Client: downloader.fetch_chunk_on_connection(key, offset, len)
                 Client-->>Worker: chunk bytes
                 Worker->>DM: write to .part (job.io_mtx)
-                Worker->>DM: mark chunk_state=2; ++chunks_done; ++downloaded_bytes
+                Worker->>DM: mark chunk_state=2
+                note over DM,Worker: increment chunks_done
+                note over DM,Worker: increment downloaded_bytes
             end
+
         else Choice 2: Status screen
             Main->>App: download_status()
             App->>DM: get_status_string()
             DM-->>Main: formatted status
+
         else Choice 3: Exit
-            Main->>TickT: tick_running=false; pthread_join
+            Main->>TickT: tick_running=false
+            note over TickT,Main: pthread_join
             Main->>Host: stop_server() (shutdown+close)
             Main->>ServerT: pthread_join
             Main->>App: exit() (pm.release_port, dm.reset)
         end
     end
-```
